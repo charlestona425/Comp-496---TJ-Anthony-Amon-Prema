@@ -62,6 +62,14 @@ class EvaluatorTests(unittest.TestCase):
         result = evaluate_document(request)
         self.assertIn("signal-agency-consent-001", {signal["signal_id"] for signal in result["positive_signals"]})
 
+    def test_repeated_analysis_is_consistent_and_handles_edge_case_text(self):
+        text = ("Información de privacidad: we do not share personal information with advertising partners. " * 200)
+        request = {"document_id": "repeatable-unicode", "text": text, "clauses": [{"clause_id": "c1", "text": text, "start_offset": 0, "end_offset": len(text)}]}
+        first = evaluate_document(request, analyzed_at="2026-10-21T00:00:00Z")
+        second = evaluate_document(request, analyzed_at="2026-10-21T00:00:00Z")
+        self.assertEqual(first, second)
+        self.assertEqual("partial", first["coverage"]["status"])
+
 
 if __name__ == "__main__":
     unittest.main()

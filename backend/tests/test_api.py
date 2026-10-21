@@ -41,6 +41,15 @@ class ApiTests(unittest.TestCase):
         self.assertEqual(415, response.status_code)
         self.assertEqual("unsupported_media_type", response.get_json()["error"]["code"])
 
+    def test_too_short_and_malformed_policy_requests_are_rejected(self):
+        short = {"document_id": "short", "source_type": "text", "text": "Too short.", "clauses": [{"clause_id": "c1", "text": "Too short.", "start_offset": 0, "end_offset": 10}]}
+        self.assertEqual(400, self.client.post("/api/v1/analyses", json=short).status_code)
+        malformed = dict(self.payload)
+        malformed["clauses"] = [{"clause_id": "c1", "text": malformed["text"], "start_offset": 10, "end_offset": 1}]
+        response = self.client.post("/api/v1/analyses", json=malformed)
+        self.assertEqual(400, response.status_code)
+        self.assertIn("invalid offsets", response.get_json()["error"]["message"])
+
     def test_api_token_is_required_when_configured(self):
         app = create_app()
         app.config.update(TESTING=True, ANALYSIS_API_TOKEN="test-token")

@@ -2,6 +2,8 @@
 
 The backend package contains the policy-rule and scoring implementation. It deliberately has no persistence layer: submitted policy text is evaluated in memory and is not logged by the engine.
 
+See `SCORING_RUBRIC.md` for score semantics, weights, thresholds, and the change record.
+
 Run unit tests with:
 
 ```powershell

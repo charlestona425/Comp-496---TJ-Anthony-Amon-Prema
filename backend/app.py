@@ -6,6 +6,7 @@ import os
 import hashlib
 import hmac
 import logging
+import re
 import time
 from typing import Any
 
@@ -16,6 +17,7 @@ from compliance_engine.evaluator import ENGINE_VERSION, evaluate_document
 MAX_REQUEST_BYTES = int(os.environ.get("MAX_ANALYSIS_REQUEST_BYTES", "1000000"))
 DEFAULT_RATE_LIMIT = int(os.environ.get("ANALYSIS_RATE_LIMIT", "60"))
 DEFAULT_RATE_WINDOW_SECONDS = int(os.environ.get("ANALYSIS_RATE_WINDOW_SECONDS", "60"))
+DEFAULT_MIN_POLICY_WORDS = int(os.environ.get("MIN_ANALYSIS_WORDS", "12"))
 logger = logging.getLogger("privacy_policy_analyzer.api")
 
 
@@ -23,7 +25,7 @@ def _error(status: int, code: str, message: str):
     return jsonify({"error": {"code": code, "message": message}}), status
 
 
-def _validate_payload(payload: Any, max_request_bytes: int) -> str | None:
+def _validate_payload(payload: Any, max_request_bytes: int, min_policy_words: int) -> str | None:
     if not isinstance(payload, dict):
         return "Request body must be a JSON object."
     for field in ("document_id", "source_type", "text", "clauses"):
@@ -33,13 +35,23 @@ def _validate_payload(payload: Any, max_request_bytes: int) -> str | None:
         return "source_type must be text, html, or pdf."
     if not isinstance(payload["text"], str) or not payload["text"].strip():
         return "text must be a non-empty string."
+    if len(re.findall(r"\b[\w'-]+\b", payload["text"])) < min_policy_words:
+        return f"text must contain at least {min_policy_words} words."
     if len(payload["text"].encode("utf-8")) > max_request_bytes:
         return "text exceeds the maximum supported size."
     if not isinstance(payload["clauses"], list) or not payload["clauses"]:
         return "clauses must be a non-empty array."
+    clause_ids = set()
     for index, clause in enumerate(payload["clauses"]):
         if not isinstance(clause, dict) or not clause.get("clause_id") or not str(clause.get("text", "")).strip():
             return f"clauses[{index}] requires non-empty clause_id and text."
+        if clause["clause_id"] in clause_ids:
+            return f"clauses[{index}] has a duplicate clause_id."
+        clause_ids.add(clause["clause_id"])
+        if not isinstance(clause.get("start_offset"), int) or not isinstance(clause.get("end_offset"), int):
+            return f"clauses[{index}] requires integer start_offset and end_offset."
+        if clause["start_offset"] < 0 or clause["end_offset"] < clause["start_offset"]:
+            return f"clauses[{index}] has invalid offsets."
     return None
 
 
@@ -50,6 +62,7 @@ def create_app() -> Flask:
         ANALYSIS_API_TOKEN=os.environ.get("ANALYSIS_API_TOKEN", ""),
         RATE_LIMIT=DEFAULT_RATE_LIMIT,
         RATE_WINDOW_SECONDS=DEFAULT_RATE_WINDOW_SECONDS,
+        MIN_POLICY_WORDS=DEFAULT_MIN_POLICY_WORDS,
         RULESET_PATH=os.environ.get("ANALYSIS_RULESET_PATH") or None,
     )
     request_times: dict[str, list[float]] = {}
@@ -81,7 +94,7 @@ def create_app() -> Flask:
         if not request.is_json:
             return _error(415, "unsupported_media_type", "Content-Type must be application/json.")
         payload = request.get_json(silent=True)
-        error = _validate_payload(payload, app.config["MAX_CONTENT_LENGTH"])
+        error = _validate_payload(payload, app.config["MAX_CONTENT_LENGTH"], app.config["MIN_POLICY_WORDS"])
         if error:
             return _error(400, "invalid_analysis_request", error)
         try:
