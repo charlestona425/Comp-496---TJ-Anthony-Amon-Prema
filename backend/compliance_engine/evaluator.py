@@ -134,6 +134,16 @@ def evaluate_document(request: Mapping[str, Any], *, catalog_path: str | Path | 
             )
 
     score_result = calculate_score(assessments)
+    for category in score_result["categories"]:
+        category_id = category["id"]
+        evidence = []
+        for finding in findings:
+            if finding["category"] == category_id:
+                evidence.extend(finding["evidence"])
+        for signal in positive_signals:
+            if signal["category"] == category_id:
+                evidence.extend(signal["evidence"])
+        category["evidence"] = list({(item["clause_id"], item["excerpt"]): item for item in evidence}.values())
     limitations = [catalog["disclaimer"], "An absent match is not evidence of legal compliance or regulatory applicability."]
     if score_result["coverage"]["status"] != "complete":
         limitations.append("One or more score categories had insufficient evidence in the supplied clauses.")

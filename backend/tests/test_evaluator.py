@@ -70,6 +70,21 @@ class EvaluatorTests(unittest.TestCase):
         self.assertEqual(first, second)
         self.assertEqual("partial", first["coverage"]["status"])
 
+    def test_explains_category_scores_with_policy_excerpts_and_tracking_signal(self):
+        text = "We use cookies and similar technologies to track your activity. We may sell your personal information to third parties."
+        request = {"document_id": "explainable", "text": text, "clauses": [{"clause_id": "c1", "text": text, "start_offset": 0, "end_offset": len(text)}]}
+        result = evaluate_document(request)
+        rules = {finding["rule_id"] for finding in result["findings"]}
+        self.assertTrue({"TRACK-001", "DSHARE-001"}.issubset(rules))
+        collection = next(category for category in result["categories"] if category["id"] == "data_collection")
+        self.assertEqual("c1", collection["evidence"][0]["clause_id"])
+
+    def test_processes_full_length_policy_within_reasonable_time(self):
+        text = ("We use cookies and similar technologies to provide services. " * 3000)
+        request = {"document_id": "full-length", "text": text, "clauses": [{"clause_id": "c1", "text": text, "start_offset": 0, "end_offset": len(text)}]}
+        result = evaluate_document(request)
+        self.assertGreater(result["trust_score"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

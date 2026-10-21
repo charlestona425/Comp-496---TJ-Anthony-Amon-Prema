@@ -24,9 +24,9 @@
       "severity": "high",
       "status": "signal",
       "score_impact": -25,
-      "concern_patterns": ["share personal information with advertising", "share your personal information with advertising", "share personal information with third parties", "share your personal information with third parties", "third-party advertising", "third party advertising", "analytics provider", "analytics providers", "sell or share your personal information"],
+      "concern_patterns": ["share personal information with advertising", "share your personal information with advertising", "share personal information with third parties", "share your personal information with third parties", "third-party advertising", "third party advertising", "analytics provider", "analytics providers", "sell or share your personal information", "sell your personal information", "sale of personal information"],
       "positive_patterns": [],
-      "exclusions": ["do not share personal information with advertising", "we do not sell or share"],
+      "exclusions": ["do not share personal information with advertising", "we do not sell or share", "do not sell your personal information"],
       "explanation": "The policy describes sharing personal information for advertising or with third parties.",
       "next_step": "Review whether applicable opt-out choices and sharing purposes are explained.",
       "regulations": [
@@ -37,6 +37,20 @@
           "reviewed_on": "2026-10-01"
         }
       ]
+    },
+    {
+      "id": "TRACK-001",
+      "title": "Cookies or tracking technology disclosed",
+      "category": "data_collection",
+      "severity": "medium",
+      "status": "signal",
+      "score_impact": -10,
+      "concern_patterns": ["cookies and similar technologies", "tracking technologies", "web beacons", "track your browsing activity", "track your activity"],
+      "positive_patterns": [],
+      "exclusions": ["do not use cookies", "do not track your activity"],
+      "explanation": "The policy describes using cookies or other tracking technology.",
+      "next_step": "Review the stated purposes and available controls for tracking technologies.",
+      "regulations": []
     },
     {
       "id": "LEGAL-ARBITRATION-001",
