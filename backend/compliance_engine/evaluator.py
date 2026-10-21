@@ -9,7 +9,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping
 
-from .scoring import CATEGORY_LABELS, CATEGORY_ORDER, CategoryAssessment, calculate_score
+from .preprocessing import preprocess_text
+from .scoring import CATEGORY_ORDER, CategoryAssessment, calculate_score
 
 ENGINE_VERSION = "0.1.0"
 DISCLAIMER = "Automated educational analysis only; this is not legal advice or a legal compliance determination."
@@ -52,13 +53,14 @@ def _matching_clauses(rule: Mapping[str, Any], clauses: list[Mapping[str, Any]],
 
 
 def _readability_assessment(text: str) -> CategoryAssessment | None:
-    words = re.findall(r"\b[\w'-]+\b", text)
+    words = re.findall(r"\b[\w'-]+\b", preprocess_text(text))
     sentences = re.findall(r"[.!?]+", text)
     if len(words) < 12:
         return None
     average = len(words) / max(1, len(sentences))
-    score = max(0, min(100, round(100 - max(0, average - 12) * 3)))
-    rationale = f"Average sentence length is {average:.1f} words across the supplied text."
+    complex_ratio = sum(len(word) >= 8 for word in words) / len(words)
+    score = max(0, min(100, round(100 - max(0, average - 12) * 3 - max(0, complex_ratio - 0.20) * 50)))
+    rationale = f"Average sentence length is {average:.1f} words; {complex_ratio:.0%} of words are eight or more characters."
     return CategoryAssessment(score=score, rationale=rationale)
 
 
@@ -138,6 +140,8 @@ def evaluate_document(request: Mapping[str, Any], *, catalog_path: str | Path | 
 
     identity = f"{request.get('document_id', 'document')}\n{request.get('text', '')}"
     digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:12]
+    key_takeaways = [finding["title"] for finding in findings[:3]]
+    key_takeaways.extend(signal["title"] for signal in positive_signals[:2])
     return {
         "analysis_id": f"analysis-{digest}",
         "engine_version": ENGINE_VERSION,
@@ -146,6 +150,7 @@ def evaluate_document(request: Mapping[str, Any], *, catalog_path: str | Path | 
         **score_result,
         "findings": findings,
         "positive_signals": positive_signals,
+        "key_takeaways": key_takeaways,
         "limitations": limitations,
         "disclaimer": DISCLAIMER,
     }

@@ -23,7 +23,7 @@ class EvaluatorTests(unittest.TestCase):
         sharing = next(finding for finding in result["findings"] if finding["rule_id"] == "DSHARE-001")
         self.assertEqual("clause-2", sharing["evidence"][0]["clause_id"])
         self.assertEqual("signal-agency-001", result["positive_signals"][0]["signal_id"])
-        self.assertEqual(66.5, result["trust_score"])
+        self.assertEqual(65.3, result["trust_score"])
         self.assertEqual("low", result["risk_level"])
 
     def test_exclusion_prevents_a_false_positive(self):
@@ -47,6 +47,20 @@ class EvaluatorTests(unittest.TestCase):
 
         self.assertEqual("partial", result["coverage"]["status"])
         self.assertTrue(any("insufficient evidence" in item.lower() for item in result["limitations"]))
+
+    def test_detects_reported_collection_sharing_and_legal_signals(self):
+        text = "We collect your email address and may share personal information with analytics providers. Disputes are resolved through binding arbitration and a class action waiver. We may change this privacy policy at any time."
+        request = {"document_id": "expanded-rules", "text": text, "clauses": [{"clause_id": "c1", "text": text, "start_offset": 0, "end_offset": len(text)}]}
+        result = evaluate_document(request)
+        rule_ids = {finding["rule_id"] for finding in result["findings"]}
+        self.assertTrue({"DCOLL-001", "DSHARE-001", "LEGAL-ARBITRATION-001", "LEGAL-CHANGE-001"}.issubset(rule_ids))
+        self.assertTrue(result["key_takeaways"])
+
+    def test_detects_consent_as_a_user_control_signal(self):
+        text = "You may withdraw consent at any time through the privacy controls in your account settings. This policy provides enough plain language for readability assessment."
+        request = {"document_id": "consent", "text": text, "clauses": [{"clause_id": "c1", "text": text, "start_offset": 0, "end_offset": len(text)}]}
+        result = evaluate_document(request)
+        self.assertIn("signal-agency-consent-001", {signal["signal_id"] for signal in result["positive_signals"]})
 
 
 if __name__ == "__main__":

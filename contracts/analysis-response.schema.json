@@ -4,7 +4,7 @@
   "title": "Privacy policy analysis response",
   "type": "object",
   "additionalProperties": false,
-  "required": ["analysis_id", "engine_version", "rule_set_version", "analyzed_at", "trust_score", "risk_level", "categories", "findings", "positive_signals", "limitations", "coverage", "disclaimer"],
+  "required": ["analysis_id", "engine_version", "rule_set_version", "analyzed_at", "trust_score", "risk_level", "categories", "findings", "positive_signals", "key_takeaways", "limitations", "coverage", "disclaimer"],
   "properties": {
     "analysis_id": { "type": "string", "minLength": 1 },
     "engine_version": { "type": "string", "minLength": 1 },
@@ -15,6 +15,7 @@
     "categories": { "type": "array", "items": { "$ref": "#/$defs/category" } },
     "findings": { "type": "array", "items": { "$ref": "#/$defs/finding" } },
     "positive_signals": { "type": "array", "items": { "$ref": "#/$defs/signal" } },
+    "key_takeaways": { "type": "array", "items": { "type": "string" } },
     "limitations": { "type": "array", "items": { "type": "string" } },
     "coverage": { "type": "object", "additionalProperties": false, "required": ["assessed_categories", "total_categories", "status"], "properties": { "assessed_categories": { "type": "integer", "minimum": 0 }, "total_categories": { "type": "integer", "const": 5 }, "status": { "type": "string", "enum": ["complete", "partial", "insufficient_evidence"] } } },
     "disclaimer": { "type": "string", "minLength": 1 }
